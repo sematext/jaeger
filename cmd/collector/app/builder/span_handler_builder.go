@@ -32,6 +32,9 @@ import (
 	zs "github.com/uber/jaeger/cmd/collector/app/sanitizer/zipkin"
 	"github.com/uber/jaeger/cmd/flags"
 	"github.com/uber/jaeger/model"
+	"github.com/uber/jaeger/identity"
+	sqlsc"github.com/uber/jaeger/identity/store/sql/config"
+	dbTokenStore"github.com/uber/jaeger/identity/store/sql"
 	cascfg "github.com/uber/jaeger/pkg/cassandra/config"
 	escfg "github.com/uber/jaeger/pkg/es/config"
 	casSpanstore "github.com/uber/jaeger/plugin/storage/cassandra/spanstore"
@@ -47,10 +50,11 @@ var (
 
 // SpanHandlerBuilder holds configuration required for handlers
 type SpanHandlerBuilder struct {
-	logger         *zap.Logger
-	metricsFactory metrics.Factory
-	collectorOpts  *CollectorOptions
-	spanWriter     spanstore.Writer
+	logger         	  *zap.Logger
+	metricsFactory    metrics.Factory
+	collectorOpts     *CollectorOptions
+	spanWriter        spanstore.Writer
+	spanAuthenticator identity.Authenticator
 }
 
 // NewSpanHandlerBuilder returns new SpanHandlerBuilder with configured span storage.
@@ -81,6 +85,19 @@ func NewSpanHandlerBuilder(cOpts *CollectorOptions, sFlags *flags.SharedFlags, o
 		spanHb.spanWriter, err = spanHb.initElasticStore(options.ElasticClientBuilder)
 	} else {
 		return nil, flags.ErrUnsupportedStorageType
+	}
+
+	var tstore identity.TokenStore
+	if cOpts.AuthSpan {
+		switch sFlags.TokenStore.Type {
+		case flags.SQLTokenStoreType:
+			tstore, err = spanHb.initDbTokenStore(options.DbTokenStoreClientBuilder)
+		default:
+			err = flags.ErrUnupportedTokenStoreType
+		}
+		if err == nil {
+			spanHb.spanAuthenticator = identity.NewSpanAuthenticator(tstore)
+		}
 	}
 
 	if err != nil {
@@ -119,6 +136,17 @@ func (spanHb *SpanHandlerBuilder) initElasticStore(esBuilder escfg.ClientBuilder
 	), nil
 }
 
+func (spanHb *SpanHandlerBuilder) initDbTokenStore(dbClientBuilder sqlsc.DbClientBuilder) (identity.TokenStore, error) {
+	client, err := dbClientBuilder.NewDbClient()
+	if err != nil {
+		return nil, err
+	}
+	return dbTokenStore.NewDbTokenStore(
+		client,
+		spanHb.logger,
+	)
+}
+
 // BuildHandlers builds span handlers (Zipkin, Jaeger)
 func (spanHb *SpanHandlerBuilder) BuildHandlers() (app.ZipkinSpansHandler, app.JaegerBatchesHandler) {
 	hostname, _ := os.Hostname()
@@ -136,7 +164,7 @@ func (spanHb *SpanHandlerBuilder) BuildHandlers() (app.ZipkinSpansHandler, app.J
 		app.Options.ServiceMetrics(spanHb.metricsFactory),
 		app.Options.HostMetrics(hostMetrics),
 		app.Options.Logger(spanHb.logger),
-		app.Options.SpanFilter(defaultSpanFilter),
+		app.Options.SpanFilter(spanHb.defaultSpanFilter),
 		app.Options.NumWorkers(spanHb.collectorOpts.NumWorkers),
 		app.Options.QueueSize(spanHb.collectorOpts.QueueSize),
 	)
@@ -145,6 +173,10 @@ func (spanHb *SpanHandlerBuilder) BuildHandlers() (app.ZipkinSpansHandler, app.J
 		app.NewJaegerSpanHandler(spanHb.logger, spanProcessor)
 }
 
-func defaultSpanFilter(*model.Span) bool {
+func (spanHb *SpanHandlerBuilder) defaultSpanFilter(span *model.Span) bool {
+	if spanHb.collectorOpts.AuthSpan {
+		authenticator := spanHb.spanAuthenticator
+		return authenticator.Authenticate(span)
+	}
 	return true
 }
