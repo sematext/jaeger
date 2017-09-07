@@ -49,6 +49,7 @@ import (
 	"github.com/uber/jaeger/pkg/recoveryhandler"
 	jc "github.com/uber/jaeger/thrift-gen/jaeger"
 	zc "github.com/uber/jaeger/thrift-gen/zipkincore"
+	sqlsFlags"github.com/uber/jaeger/identity/flags/sql"
 )
 
 func main() {
@@ -59,6 +60,7 @@ func main() {
 	serviceName := "jaeger-collector"
 	casOptions := casFlags.NewOptions("cassandra")
 	esOptions := esFlags.NewOptions("es")
+	dbTokenStoreOptions := sqlsFlags.NewOptions("token-store.sql")
 
 	v := viper.New()
 	command := &cobra.Command{
@@ -87,6 +89,7 @@ func main() {
 				basicB.Options.ElasticClientOption(esOptions.GetPrimary()),
 				basicB.Options.LoggerOption(logger),
 				basicB.Options.MetricsFactoryOption(baseMetrics),
+				basicB.Options.DbTokenStoreClientOption(dbTokenStoreOptions.GetPrimary()),
 			)
 			if err != nil {
 				logger.Fatal("Unable to set up builder", zap.Error(err))
