@@ -39,9 +39,12 @@ const (
 	ESStorageType                  = "elasticsearch"
 	runtimeMetricsFrequency        = "runtime-metrics-frequency"
 	spanStorageType                = "span-storage.type"
+	tokenStoreType				   = "token-store.type"
 	logLevel                       = "log-level"
 	dependencyStorageType          = "dependency-storage.type"
 	dependencyStorageDataFrequency = "dependency-storage.data-frequency"
+	// SQLTokenStore is the token store type flag denoting relational database where tokens are stored
+	SQLTokenStoreType 			   = "sql"
 )
 
 // SharedFlags holds flags configuration
@@ -50,6 +53,8 @@ type SharedFlags struct {
 	SpanStorage spanStorage
 	// DependencyStorage defines common settings for Dependency Storage.
 	DependencyStorage dependencyStorage
+	// TokenStore defines common settings for Token Store
+	TokenStore tokenStore
 }
 
 // InitFromViper initializes SharedFlags with properties from viper
@@ -57,6 +62,7 @@ func (flags *SharedFlags) InitFromViper(v *viper.Viper) *SharedFlags {
 	flags.SpanStorage.Type = v.GetString(spanStorageType)
 	flags.DependencyStorage.Type = v.GetString(dependencyStorageType)
 	flags.DependencyStorage.DataFrequency = v.GetDuration(dependencyStorageDataFrequency)
+	flags.TokenStore.Type = v.GetString(tokenStoreType)
 	return flags
 }
 
@@ -66,11 +72,14 @@ func AddFlags(flagSet *flag.FlagSet) {
 	flagSet.String(spanStorageType, CassandraStorageType, fmt.Sprintf("The type of span storage backend to use, options are currently [%v,%v,%v]", CassandraStorageType, ESStorageType, MemoryStorageType))
 	flagSet.String(logLevel, "info", "Minimal allowed log level")
 	flagSet.String(dependencyStorageType, CassandraStorageType, fmt.Sprintf("The type of dependency storage backend to use, options are currently [%v,%v,%v]", CassandraStorageType, ESStorageType, MemoryStorageType))
+	flagSet.String(tokenStoreType, SQLTokenStoreType, "The type of token store for span authentication")
 	flagSet.Duration(dependencyStorageDataFrequency, time.Hour*24, "Frequency of service dependency calculations")
 }
 
 // ErrUnsupportedStorageType is the error when dealing with an unsupported storage type
 var ErrUnsupportedStorageType = errors.New("Storage Type is not supported")
+// ErrUnupportedTokenStoreType is the error when dealing with an unsupported token store type
+var ErrUnupportedTokenStoreType = errors.New("TokenStore Type is not supported")
 
 type logging struct {
 	Level string
@@ -83,6 +92,10 @@ type spanStorage struct {
 type dependencyStorage struct {
 	Type          string
 	DataFrequency time.Duration
+}
+
+type tokenStore struct {
+	Type string
 }
 
 type cassandraOptions struct {
