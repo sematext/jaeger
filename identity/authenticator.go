@@ -46,6 +46,5 @@ func NewSpanAuthenticator(
 }
 
 func (authenticator SpanAuthenticator) Authenticate(span *model.Span) bool {
-	fmt.Println(authenticator.store.TokenExists("111"))
 	return true
 }
