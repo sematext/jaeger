@@ -27,6 +27,7 @@ import (
 	cascfg "github.com/uber/jaeger/pkg/cassandra/config"
 	escfg "github.com/uber/jaeger/pkg/es/config"
 	"github.com/uber/jaeger/storage/spanstore/memory"
+	sqlscfg"github.com/uber/jaeger/identity/store/sql/config"
 )
 
 // BasicOptions is a set of basic building blocks for most Jaeger executables
@@ -41,6 +42,8 @@ type BasicOptions struct {
 	CassandraSessionBuilder cascfg.SessionBuilder
 	// ElasticClientBuilder is the elasticsearch client builder
 	ElasticClientBuilder escfg.ClientBuilder
+	// DbClientBuilder is the SQL client builder for token store
+	DbTokenStoreClientBuilder sqlscfg.DbClientBuilder
 }
 
 // Option is a function that sets some option on StorageBuilder.
@@ -81,6 +84,13 @@ func (BasicOptions) ElasticClientOption(clientBuilder escfg.ClientBuilder) Optio
 func (BasicOptions) MemoryStoreOption(memoryStore *memory.Store) Option {
 	return func(b *BasicOptions) {
 		b.MemoryStore = memoryStore
+	}
+}
+
+// DbTokenStoreClientOption creates an Option that adds SQL client builder for token store
+func (BasicOptions) DbTokenStoreClientOption(clientBuilder sqlscfg.DbClientBuilder) Option {
+	return func(b *BasicOptions) {
+		b.DbTokenStoreClientBuilder = clientBuilder
 	}
 }
 
