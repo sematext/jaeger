@@ -50,11 +50,11 @@ func (c Client) Ping() error {
 	return c.db.Ping()
 }
 
-// QueryRow executes a query with a single named parameter. Returns an error
-// if now rows are retrieved to the result set.
-func (c Client) QueryRow(query string, arg interface{}) (interface{}, error) {
+// QueryRow executes a query with named parameters. Returns an error
+// if no rows are pushed to the result set.
+func (c Client) QueryRow(query string, args ...interface{}) (interface{}, error) {
 	var result interface{}
-	err := c.db.QueryRow(query, arg).Scan(&result)
+	err := c.db.QueryRow(query, args...).Scan(&result)
 	if err != nil {
 		return nil, err
 	}
