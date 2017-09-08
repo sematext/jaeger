@@ -24,7 +24,7 @@ package identity
 
 import (
 	"github.com/uber/jaeger/model"
-	"fmt"
+	"go.uber.org/zap"
 )
 
 // Authenticator authenticates inbound spans
@@ -34,17 +34,30 @@ type Authenticator interface {
 
 type SpanAuthenticator struct {
 	store 	 TokenStore
+	logger   *zap.Logger
 	tokenKey string
 }
 
 func NewSpanAuthenticator(
 	tokenStore TokenStore,
+	logger *zap.Logger,
+	tokenKey string,
 ) SpanAuthenticator {
 	return SpanAuthenticator{
 		store: tokenStore,
+		logger: logger,
+		tokenKey: tokenKey,
 	}
 }
 
-func (authenticator SpanAuthenticator) Authenticate(span *model.Span) bool {
-	return true
+// Authenticate accept the incoming span if it carries a tag whose key name
+// is specified by tokenKey, and the token associated with former key is present
+// in the token store
+func (ath SpanAuthenticator) Authenticate(span *model.Span) bool {
+	if kv, ok := span.Tags.FindByKey(ath.tokenKey); ok != false {
+		return ath.store.TokenExists(kv.VStr)
+	} else {
+		ath.logger.Warn("Token not found in tags", zap.String("token-key", ath.tokenKey))
+		return false
+	}
 }
