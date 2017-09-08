@@ -96,7 +96,11 @@ func NewSpanHandlerBuilder(cOpts *CollectorOptions, sFlags *flags.SharedFlags, o
 			err = flags.ErrUnupportedTokenStoreType
 		}
 		if err == nil {
-			spanHb.spanAuthenticator = identity.NewSpanAuthenticator(tstore)
+			spanHb.spanAuthenticator = identity.NewSpanAuthenticator(
+				tstore,
+				options.Logger,
+				"token",
+			)
 		}
 	}
 
@@ -144,6 +148,8 @@ func (spanHb *SpanHandlerBuilder) initDbTokenStore(dbClientBuilder sqlsc.DbClien
 	return dbTokenStore.NewDbTokenStore(
 		client,
 		spanHb.logger,
+		dbClientBuilder.GetQuery(),
+		100,
 	)
 }
 
