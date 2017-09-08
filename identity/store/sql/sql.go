@@ -26,11 +26,15 @@ import (
 	"github.com/uber/jaeger/identity"
 	"github.com/uber/jaeger/pkg/cache"
 	"go.uber.org/zap"
+	"time"
 )
+
+type CacheMissCallback func() bool
 
 // DbTokenStore describes the store based on relational database engine
 type DbTokenStore struct {
 	client *Client
+	logger *zap.Logger
 	cache  cache.Cache
 	query  string
 }
@@ -40,12 +44,22 @@ type DbTokenStore struct {
 func NewDbTokenStore(
 	client *Client,
 	logger *zap.Logger,
+	query string,
+	maxCacheSize int,
 ) (*DbTokenStore, error) {
 	if err := client.Ping(); err != nil {
 		return nil, err
 	}
 	return &DbTokenStore{
 		client: client,
+		logger: logger,
+		cache: cache.NewLRUWithOptions(
+			maxCacheSize,
+			&cache.Options{
+				TTL: time.Millisecond * 100,
+			},
+		),
+		query: query,
 	}, nil
 }
 
@@ -53,7 +67,34 @@ func NewDbTokenStore(
 // against the underlying database engine. If found, the token is cached to
 // avoid subsequent round trips to the database server, and thus reducing the
 // overall I/O activity.
-func (store DbTokenStore) TokenExists(token identity.Token) bool {
-	return true
+func (store *DbTokenStore) TokenExists(token string, parameters ...identity.TokenParameters) bool {
+	return store.findInCache(
+		token,
+		func() bool {
+			args := make([]interface{}, len(parameters))
+			for i, param := range parameters {
+				args[i] = param
+			}
+			args = append([]interface{}{token}, args...)
+			result, err := store.client.QueryRow(store.query, args...)
+			if err != nil {
+				store.logger.Warn("Unable to find token in the store", zap.String("token", token), zap.Error(err))
+				return false
+			}
+			store.logger.Info("Putting token in cache", zap.String("token", token))
+			store.cache.Put(token, result)
+			return true
+		},
+	)
+}
+
+// findInCache attempts to find a token in the cache. If the token isn't yet indexed, CacheMissCallback
+// function will be executed to find the token in the SQL store.
+func (store *DbTokenStore) findInCache(token string, cb CacheMissCallback) bool {
+	if store.cache.Get(token) != nil {
+		return true
+	} else {
+		return cb()
+	}
 }
 
