@@ -30,6 +30,7 @@ import (
 // DbClientBuilder creates a new SQL client
 type DbClientBuilder interface {
 	NewDbClient() (*sql.Client, error)
+	GetQuery() string
 }
 
 // Configuration describes the config properties needed to connect to a SQL database
@@ -46,8 +47,9 @@ type Configuration struct {
 	Username string
 	// Password to authenticate to an instance of the database
 	Password string
-	// FindTokenSelect specifies the SQL query that's used to obtain the token
-	TokenExistsSelect string
+	// Query specifies the SQL query that's used to obtain the token
+	Query string
+
 	CacheEviction int
 	UnixSocket string
 }
@@ -60,6 +62,10 @@ func (c *Configuration) NewDbClient() (*sql.Client, error) {
 	return client, nil
 }
 
-func (c Configuration) buildDataSource() string {
+func (c *Configuration) GetQuery() string {
+	return c.Query
+}
+
+func (c *Configuration) buildDataSource() string {
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", c.Username, c.Password, c.Host, c.Port, c.Database)
 }
