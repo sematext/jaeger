@@ -22,9 +22,9 @@
 
 package identity
 
-// Token is an aliased type for the authentication token
-type Token interface{}
+// TokenParameters is an aliased type for the extra authentication token parameters
+type TokenParameters interface{}
 
 type TokenStore interface {
-	TokenExists(token Token) bool
+	TokenExists(token string, parameters ...TokenParameters) bool
 }
