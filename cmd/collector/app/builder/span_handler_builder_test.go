@@ -74,6 +74,7 @@ func TestNewSpanHandlerBuilder(t *testing.T) {
 	zipkin, jaeger := handler.BuildHandlers()
 	assert.NotNil(t, zipkin)
 	assert.NotNil(t, jaeger)
+	assert.True(t, handler.defaultSpanFilter(nil))
 }
 
 func TestNewSpanHandlerBuilderCassandraNoSession(t *testing.T) {
@@ -183,8 +184,4 @@ func TestNewSpanHandlerBuilderElasticSearchFailure(t *testing.T) {
 	handler, err := NewSpanHandlerBuilder(cOpts, sFlags)
 	assert.EqualError(t, err, "ElasticSearch not configured")
 	assert.Nil(t, handler)
-}
-
-func TestDefaultSpanFilter(t *testing.T) {
-	assert.True(t, defaultSpanFilter(nil))
 }
