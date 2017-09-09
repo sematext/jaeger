@@ -32,7 +32,7 @@ import (
 	zs "github.com/uber/jaeger/cmd/collector/app/sanitizer/zipkin"
 	"github.com/uber/jaeger/cmd/flags"
 	"github.com/uber/jaeger/model"
-	"github.com/uber/jaeger/identity"
+	i"github.com/uber/jaeger/identity"
 	sqlsc"github.com/uber/jaeger/identity/store/sql/config"
 	dbTokenStore"github.com/uber/jaeger/identity/store/sql"
 	cascfg "github.com/uber/jaeger/pkg/cassandra/config"
@@ -54,7 +54,7 @@ type SpanHandlerBuilder struct {
 	metricsFactory    metrics.Factory
 	collectorOpts     *CollectorOptions
 	spanWriter        spanstore.Writer
-	spanAuthenticator identity.Authenticator
+	spanAuthenticator i.Authenticator
 }
 
 // NewSpanHandlerBuilder returns new SpanHandlerBuilder with configured span storage.
@@ -87,7 +87,7 @@ func NewSpanHandlerBuilder(cOpts *CollectorOptions, sFlags *flags.SharedFlags, o
 		return nil, flags.ErrUnsupportedStorageType
 	}
 
-	var tstore identity.TokenStore
+	var tstore i.TokenStore
 	if cOpts.AuthSpan {
 		switch sFlags.TokenStore.Type {
 		case flags.SQLTokenStoreType:
@@ -96,7 +96,7 @@ func NewSpanHandlerBuilder(cOpts *CollectorOptions, sFlags *flags.SharedFlags, o
 			err = flags.ErrUnupportedTokenStoreType
 		}
 		if err == nil {
-			spanHb.spanAuthenticator = identity.NewSpanAuthenticator(
+			spanHb.spanAuthenticator = i.NewSpanAuthenticator(
 				tstore,
 				options.Logger,
 				"token",
@@ -140,7 +140,7 @@ func (spanHb *SpanHandlerBuilder) initElasticStore(esBuilder escfg.ClientBuilder
 	), nil
 }
 
-func (spanHb *SpanHandlerBuilder) initDbTokenStore(dbClientBuilder sqlsc.DbClientBuilder) (identity.TokenStore, error) {
+func (spanHb *SpanHandlerBuilder) initDbTokenStore(dbClientBuilder sqlsc.DbClientBuilder) (i.TokenStore, error) {
 	client, err := dbClientBuilder.NewDbClient()
 	if err != nil {
 		return nil, err
