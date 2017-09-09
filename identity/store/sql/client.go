@@ -31,8 +31,8 @@ type Client struct {
 	db *sql.DB
 }
 
-// NewClient builds a new SQL client. Note you'll need to import the database driver for
-// each relational database engine you would like to support.
+// NewClient builds a new SQL client. It's necessary to import the specific database driver for
+// each relational database engine in order to manipulate and access the data.
 func NewClient(
 	driver string,
 	datasource string,
@@ -50,10 +50,11 @@ func (c Client) Ping() error {
 	return c.db.Ping()
 }
 
-// QueryRow executes a query with named parameters. Returns an error
-// if no rows are pushed to the result set.
-func (c Client) QueryRow(query string, args ...interface{}) (interface{}, error) {
+// QueryForRow executes a given query with named parameters. The query has to return one field
+// per row. If no rows are fetched into the result set, an error is returned
+func (c Client) QueryForRow(query string, args ...interface{}) (interface{}, error) {
 	var result interface{}
+	// TODO: check query structure with SQL parser
 	err := c.db.QueryRow(query, args...).Scan(&result)
 	if err != nil {
 		return nil, err
