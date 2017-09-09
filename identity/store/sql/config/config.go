@@ -27,6 +27,10 @@ import (
 	"github.com/uber/jaeger/identity/store/sql"
 )
 
+const (
+	DriverMysql = "mysql"
+)
+
 // DbClientBuilder creates a new SQL client
 type DbClientBuilder interface {
 	NewDbClient() (*sql.Client, error)
@@ -49,13 +53,15 @@ type Configuration struct {
 	Password string
 	// Query specifies the SQL query that's used to obtain the token
 	Query string
-
 	CacheEviction int
-	UnixSocket string
 }
 
 func (c *Configuration) NewDbClient() (*sql.Client, error) {
-	client, err := sql.NewClient(c.Driver, c.buildDataSource())
+	datasource, err := c.buildDataSource()
+	if err != nil {
+		return nil, err
+	}
+	client, err := sql.NewClient(c.Driver, datasource)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +72,11 @@ func (c *Configuration) GetQuery() string {
 	return c.Query
 }
 
-func (c *Configuration) buildDataSource() string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", c.Username, c.Password, c.Host, c.Port, c.Database)
+func (c *Configuration) buildDataSource() (string, error) {
+	switch c.Driver {
+	case DriverMysql:
+		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", c.Username, c.Password, c.Host, c.Port, c.Database), nil
+	default:
+		return "", fmt.Errorf("%s driver is not supported", c.Driver)
+	}
 }
