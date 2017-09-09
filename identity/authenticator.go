@@ -35,29 +35,35 @@ type Authenticator interface {
 type SpanAuthenticator struct {
 	store 	 TokenStore
 	logger   *zap.Logger
-	tokenKey string
+	key 	 string
 }
 
 func NewSpanAuthenticator(
 	tokenStore TokenStore,
 	logger *zap.Logger,
-	tokenKey string,
+	key string,
 ) SpanAuthenticator {
 	return SpanAuthenticator{
 		store: tokenStore,
 		logger: logger,
-		tokenKey: tokenKey,
+		key: key,
 	}
 }
 
 // Authenticate accept the incoming span if it carries a tag whose key name
-// is specified by tokenKey, and the token associated with former key is present
+// is specified by key field and the token associated with former key is present
 // in the token store
-func (ath SpanAuthenticator) Authenticate(span *model.Span) bool {
-	if kv, ok := span.Tags.FindByKey(ath.tokenKey); ok != false {
-		return ath.store.TokenExists(kv.VStr)
+func (spanAuth SpanAuthenticator) Authenticate(span *model.Span) bool {
+	if kv, ok := span.Tags.FindByKey(spanAuth.key); ok != false {
+		token := kv.VStr
+		found, err := spanAuth.store.FindToken(token)
+		if err != nil {
+			spanAuth.logger.Warn("Unable to find token in the store", zap.String("token", token), zap.Error(err))
+			return false
+		}
+		return found
 	} else {
-		ath.logger.Warn("Token not found in tags", zap.String("token-key", ath.tokenKey))
+		spanAuth.logger.Warn("Token not found in tags", zap.String("token-key", spanAuth.key))
 		return false
 	}
 }
