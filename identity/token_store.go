@@ -26,5 +26,5 @@ package identity
 type TokenParameters interface{}
 
 type TokenStore interface {
-	TokenExists(token string, parameters ...TokenParameters) bool
+	FindToken(token string, parameters ...TokenParameters) (bool, error)
 }
