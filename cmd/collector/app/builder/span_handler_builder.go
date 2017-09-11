@@ -99,7 +99,7 @@ func NewSpanHandlerBuilder(cOpts *CollectorOptions, sFlags *flags.SharedFlags, o
 			spanHb.spanAuthenticator = i.NewSpanAuthenticator(
 				tstore,
 				options.Logger,
-				"token",
+				cOpts.AuthTokenKey,
 			)
 		}
 	}
@@ -149,7 +149,8 @@ func (spanHb *SpanHandlerBuilder) initDbTokenStore(dbClientBuilder sqlsc.DbClien
 		client,
 		spanHb.logger,
 		dbClientBuilder.GetQuery(),
-		100,
+		dbClientBuilder.GetMaxCacheSize(),
+		dbClientBuilder.GetCacheEviction(),
 	)
 }
 
