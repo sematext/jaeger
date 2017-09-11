@@ -50,6 +50,7 @@ import (
 	jc "github.com/uber/jaeger/thrift-gen/jaeger"
 	zc "github.com/uber/jaeger/thrift-gen/zipkincore"
 	sqlsFlags"github.com/uber/jaeger/identity/flags/sql"
+	memsFlags"github.com/uber/jaeger/identity/flags/memory"
 )
 
 func main() {
@@ -61,6 +62,7 @@ func main() {
 	casOptions := casFlags.NewOptions("cassandra")
 	esOptions := esFlags.NewOptions("es")
 
+	memTokenStoreOptions := memsFlags.NewOptions("token-store.memory")
 	dbTokenStoreOptions := sqlsFlags.NewOptions("token-store.sql")
 
 	v := viper.New()
@@ -73,6 +75,7 @@ func main() {
 			casOptions.InitFromViper(v)
 			esOptions.InitFromViper(v)
 
+			memTokenStoreOptions.InitFromViper(v)
 			dbTokenStoreOptions.InitFromViper(v)
 
 			baseMetrics := xkit.Wrap(serviceName, expvar.NewFactory(10))
@@ -93,6 +96,7 @@ func main() {
 				basicB.Options.LoggerOption(logger),
 				basicB.Options.MetricsFactoryOption(baseMetrics),
 				basicB.Options.DbTokenStoreClientOption(dbTokenStoreOptions.GetPrimary()),
+				basicB.Options.InMemoryTokenStoreOption(memTokenStoreOptions.GetPrimary()),
 			)
 			if err != nil {
 				logger.Fatal("Unable to set up builder", zap.Error(err))
@@ -147,6 +151,7 @@ func main() {
 		casOptions.AddFlags,
 		esOptions.AddFlags,
 		dbTokenStoreOptions.AddFlags,
+		memTokenStoreOptions.AddFlags,
 	)
 
 	if error := command.Execute(); error != nil {
