@@ -60,6 +60,7 @@ func main() {
 	serviceName := "jaeger-collector"
 	casOptions := casFlags.NewOptions("cassandra")
 	esOptions := esFlags.NewOptions("es")
+
 	dbTokenStoreOptions := sqlsFlags.NewOptions("token-store.sql")
 
 	v := viper.New()
@@ -71,6 +72,8 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			casOptions.InitFromViper(v)
 			esOptions.InitFromViper(v)
+
+			dbTokenStoreOptions.InitFromViper(v)
 
 			baseMetrics := xkit.Wrap(serviceName, expvar.NewFactory(10))
 
@@ -143,6 +146,7 @@ func main() {
 		builder.AddFlags,
 		casOptions.AddFlags,
 		esOptions.AddFlags,
+		dbTokenStoreOptions.AddFlags,
 	)
 
 	if error := command.Execute(); error != nil {
