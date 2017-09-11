@@ -56,6 +56,7 @@ func TestNewDbTokenStore(t *testing.T) {
 		logger,
 		"SELECT token FROM system WHERE token = ?",
 		100,
+		3600,
 	)
 	require.NoError(t, err)
 	assert.NotNil(t, store)
@@ -73,6 +74,7 @@ func TestNewDbTokenStorePingError(t *testing.T) {
 		logger,
 		"SELECT token FROM system WHERE token = ?",
 		100,
+		3600,
 	)
 	require.Error(t, err)
 }
@@ -92,6 +94,7 @@ func TestFindToken(t *testing.T) {
 		logger,
 		"SELECT token FROM system WHERE token = ?",
 		100,
+		3600,
 	)
 	assert.Nil(t, store.cache.Get("c15a1793-71b7-46a5-88c5-bc76f9c772a0"))
 	found, err := store.FindToken("c15a1793-71b7-46a5-88c5-bc76f9c772a0")
@@ -115,6 +118,7 @@ func TestFindTokenQueryError(t *testing.T) {
 		logger,
 		"SELECT token FROM system WHERE token = ?",
 		100,
+		3600,
 	)
 	assert.Nil(t, store.cache.Get("c15a1793-71b7-46a5-88c5-bc76f9c772a0"))
 	_, err := store.FindToken("c15a1793-71b7-46a5-88c5-bc76f9c772a0")
