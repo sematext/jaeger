@@ -38,6 +38,7 @@ const (
 	collectorZipkinHTTPort       = "collector.zipkin.http-port"
 	collectorHealthCheckHTTPPort = "collector.health-check-http-port"
 	collectorAuthSpan 	 		 = "collector.auth-span"
+	collectorSpanAuthTokenKey	 = "collector.auth-token-key"
 )
 
 // CollectorOptions holds configuration for collector
@@ -58,6 +59,8 @@ type CollectorOptions struct {
 	CollectorHealthCheckHTTPPort int
 	// AuthSpan is the boolean that indicates if the incoming span's app token should be checked against token store
 	AuthSpan bool
+	// AuthTokenKey defines the name of the tag's key associated with an authentication token
+	AuthTokenKey string
 }
 
 // AddFlags adds flags for CollectorOptions
@@ -70,6 +73,7 @@ func AddFlags(flags *flag.FlagSet) {
 	flags.Int(collectorZipkinHTTPort, 0, "The http port for the Zipkin collector service e.g. 9411")
 	flags.Int(collectorHealthCheckHTTPPort, 14269, "The http port for the health check service")
 	flags.Bool(collectorAuthSpan, false, "Defines if incoming spans should be authenticated")
+	flags.String(collectorSpanAuthTokenKey, app.DefaultAuthTokenKey, "The name of the key that's used to find the authentication token from the tags")
 }
 
 // InitFromViper initializes CollectorOptions with properties from viper
@@ -82,5 +86,6 @@ func (cOpts *CollectorOptions) InitFromViper(v *viper.Viper) *CollectorOptions {
 	cOpts.CollectorZipkinHTTPPort = v.GetInt(collectorZipkinHTTPort)
 	cOpts.CollectorHealthCheckHTTPPort = v.GetInt(collectorHealthCheckHTTPPort)
 	cOpts.AuthSpan = v.GetBool(collectorAuthSpan)
+	cOpts.AuthTokenKey = v.GetString(collectorSpanAuthTokenKey)
 	return cOpts
 }
