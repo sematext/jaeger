@@ -28,6 +28,7 @@ import (
 	escfg "github.com/uber/jaeger/pkg/es/config"
 	"github.com/uber/jaeger/storage/spanstore/memory"
 	sqlscfg"github.com/uber/jaeger/identity/store/sql/config"
+	memscfg"github.com/uber/jaeger/identity/store/memory/config"
 )
 
 // BasicOptions is a set of basic building blocks for most Jaeger executables
@@ -44,6 +45,8 @@ type BasicOptions struct {
 	ElasticClientBuilder escfg.ClientBuilder
 	// DbClientBuilder is the SQL client builder for token store
 	DbTokenStoreClientBuilder sqlscfg.DbClientBuilder
+	// MemTokens is a builder for in-memory token store
+	InMemoryTokenStoreBuilder memscfg.InMemoryTokenStoreBuilder
 }
 
 // Option is a function that sets some option on StorageBuilder.
@@ -91,6 +94,13 @@ func (BasicOptions) MemoryStoreOption(memoryStore *memory.Store) Option {
 func (BasicOptions) DbTokenStoreClientOption(clientBuilder sqlscfg.DbClientBuilder) Option {
 	return func(b *BasicOptions) {
 		b.DbTokenStoreClientBuilder = clientBuilder
+	}
+}
+
+// MemTokensProviderOption creates an Option that adds an in-memory token provider auth tokens
+func (BasicOptions) InMemoryTokenStoreOption(builder memscfg.InMemoryTokenStoreBuilder) Option {
+	return func(b *BasicOptions) {
+		b.InMemoryTokenStoreBuilder = builder
 	}
 }
 
