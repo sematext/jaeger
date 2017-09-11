@@ -22,33 +22,26 @@
 package memory
 
 import (
-	i"github.com/uber/jaeger/identity"
-	"github.com/pkg/errors"
+	"testing"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// InMemoryTokenStore is the in-memory implementation of the token store
-type InMemoryTokenStore struct {
-	tokens map[string]string
+func TestNewInMemoryTokenStoreEmptyTokens(t *testing.T) {
+	_, err := NewInMemoryTokenStore([]string{})
+	require.Error(t, err)
 }
 
-func NewInMemoryTokenStore(
-	tokens []string,
-) (*InMemoryTokenStore, error) {
-	if len(tokens) < 1 {
-		return nil, errors.New("No tokens provided for in-memory store")
-	}
-	store := &InMemoryTokenStore{
-		tokens: make(map[string]string),
-	}
-	for _, token := range tokens {
-		store.tokens[token] = token
-	}
-	return store, nil
-}
-
-func (store *InMemoryTokenStore) FindToken(token string, parameters ...i.TokenParameters) (bool, error) {
-	if _, ok := store.tokens[token]; ok {
-		return true, nil
-	}
-	return false, nil
+func TestFindToken(t *testing.T) {
+	store, _ := NewInMemoryTokenStore(
+		[]string{
+			"38094e7a-96f8-11e7-bc87-9bae86d05b5b",
+			"45f4b11e-96f8-11e7-9e14-a7be8cf5fadf",
+			"4c788060-96f8-11e7-99db-5f748d21718d",
+		},
+	)
+	t1, _ := store.FindToken("38094e7a-96f8-11e7-bc87-9bae86d05b5b")
+	assert.True(t, t1)
+	t2, _ := store.FindToken("44f4b11e-96f8-11e7-9e14-a7be8cf5fadf")
+	assert.False(t, t2)
 }
