@@ -31,7 +31,7 @@ import (
 
 // DbTokenStore describes the store based on relational database engine
 type DbTokenStore struct {
-	client *Client
+	client DbClient
 	logger *zap.Logger
 	cache  cache.Cache
 	query  string
@@ -40,7 +40,7 @@ type DbTokenStore struct {
 // NewDbTokenStore creates a new instance of the SQL-based token store. It attempts to
 // ping the database server to ensure it's available.
 func NewDbTokenStore(
-	client *Client,
+	client DbClient,
 	logger *zap.Logger,
 	query string,
 	maxCacheSize int,

@@ -27,6 +27,11 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+type DbClient interface {
+	Ping() error
+	QueryForRow(query string, args ...interface{}) (interface{}, error)
+}
+
 type Client struct {
 	db *sql.DB
 }
