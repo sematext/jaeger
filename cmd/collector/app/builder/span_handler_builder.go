@@ -34,7 +34,9 @@ import (
 	"github.com/uber/jaeger/model"
 	i"github.com/uber/jaeger/identity"
 	sqlsc"github.com/uber/jaeger/identity/store/sql/config"
+	memsc"github.com/uber/jaeger/identity/store/memory/config"
 	dbTokenStore"github.com/uber/jaeger/identity/store/sql"
+	memTokenStore"github.com/uber/jaeger/identity/store/memory"
 	cascfg "github.com/uber/jaeger/pkg/cassandra/config"
 	escfg "github.com/uber/jaeger/pkg/es/config"
 	casSpanstore "github.com/uber/jaeger/plugin/storage/cassandra/spanstore"
@@ -90,6 +92,8 @@ func NewSpanHandlerBuilder(cOpts *CollectorOptions, sFlags *flags.SharedFlags, o
 	var tstore i.TokenStore
 	if cOpts.AuthSpan {
 		switch sFlags.TokenStore.Type {
+		case flags.InMemoryTokenStoreType:
+			tstore, err = spanHb.initInMemoryTokenStore(options.InMemoryTokenStoreBuilder)
 		case flags.SQLTokenStoreType:
 			tstore, err = spanHb.initDbTokenStore(options.DbTokenStoreClientBuilder)
 		default:
@@ -152,6 +156,10 @@ func (spanHb *SpanHandlerBuilder) initDbTokenStore(dbClientBuilder sqlsc.DbClien
 		dbClientBuilder.GetMaxCacheSize(),
 		dbClientBuilder.GetCacheEviction(),
 	)
+}
+
+func (spanHb *SpanHandlerBuilder) initInMemoryTokenStore(inMemoryTokenStoreBuilder memsc.InMemoryTokenStoreBuilder) (i.TokenStore, error) {
+	return memTokenStore.NewInMemoryTokenStore(inMemoryTokenStoreBuilder.GetTokens())
 }
 
 // BuildHandlers builds span handlers (Zipkin, Jaeger)
