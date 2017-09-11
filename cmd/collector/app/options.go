@@ -34,6 +34,8 @@ const (
 	DefaultNumWorkers = 50
 	// DefaultQueueSize is the size of the processor's queue
 	DefaultQueueSize = 2000
+	// DefaultAuthTokenKey s the default name of the tag's key used to lookup the authentication token
+	DefaultAuthTokenKey = "token"
 )
 
 type options struct {
