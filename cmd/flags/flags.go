@@ -43,8 +43,10 @@ const (
 	logLevel                       = "log-level"
 	dependencyStorageType          = "dependency-storage.type"
 	dependencyStorageDataFrequency = "dependency-storage.data-frequency"
-	// SQLTokenStore is the token store type flag denoting relational database where tokens are stored
+	// SQLTokenStore is the token store type flag denoting relational database token stores
 	SQLTokenStoreType 			   = "sql"
+	// InMemoryTokenStoreType is in-memory based token store
+	InMemoryTokenStoreType		   = "memory"
 )
 
 // SharedFlags holds flags configuration
@@ -72,7 +74,7 @@ func AddFlags(flagSet *flag.FlagSet) {
 	flagSet.String(spanStorageType, CassandraStorageType, fmt.Sprintf("The type of span storage backend to use, options are currently [%v,%v,%v]", CassandraStorageType, ESStorageType, MemoryStorageType))
 	flagSet.String(logLevel, "info", "Minimal allowed log level")
 	flagSet.String(dependencyStorageType, CassandraStorageType, fmt.Sprintf("The type of dependency storage backend to use, options are currently [%v,%v,%v]", CassandraStorageType, ESStorageType, MemoryStorageType))
-	flagSet.String(tokenStoreType, SQLTokenStoreType, "The type of token store for span authentication")
+	flagSet.String(tokenStoreType, InMemoryTokenStoreType, "The type of token store for span authentication")
 	flagSet.Duration(dependencyStorageDataFrequency, time.Hour*24, "Frequency of service dependency calculations")
 }
 
