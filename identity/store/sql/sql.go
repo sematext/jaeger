@@ -44,6 +44,7 @@ func NewDbTokenStore(
 	logger *zap.Logger,
 	query string,
 	maxCacheSize int,
+	cacheEviction time.Duration,
 ) (*DbTokenStore, error) {
 	if err := client.Ping(); err != nil {
 		return nil, err
@@ -54,7 +55,7 @@ func NewDbTokenStore(
 		cache: cache.NewLRUWithOptions(
 			maxCacheSize,
 			&cache.Options{
-				TTL: time.Second * 100,
+				TTL: time.Second * cacheEviction,
 			},
 		),
 		query: query,
