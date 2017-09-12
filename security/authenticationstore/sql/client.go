@@ -26,17 +26,19 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+type RowMapper func(*sql.Row) (interface{}, error)
+
 type DbClient interface {
 	Ping() error
-	QueryForRow(query string, args ...interface{}) (interface{}, error)
+	QueryForRow(query string, mapper RowMapper, args ...interface{}) (interface{}, error)
 }
 
 type Client struct {
 	db *sql.DB
 }
 
-// NewClient builds a new SQL client. It's necessary to import the specific database driver for
-// each relational database engine in order to manipulate and access the data.
+// NewClient builds a new SQL client. The driver for a specific database engine needs to be
+// registered for in order to manipulate and access the data.
 func NewClient(
 	driver string,
 	datasource string,
@@ -54,12 +56,11 @@ func (c Client) Ping() error {
 	return c.db.Ping()
 }
 
-// QueryForRow executes a given query with named parameters. The query has to return one field
-// per row. If no rows are fetched into the result set, an error is returned
-func (c Client) QueryForRow(query string, args ...interface{}) (interface{}, error) {
-	var result interface{}
-	// TODO: check query structure with SQL parser
-	err := c.db.QueryRow(query, args...).Scan(&result)
+// QueryForRow executes a given query. RowMapper function is called on the fetched row to scan
+// the acquired fields and bind them to variables or to fields of the structure.
+func (c Client) QueryForRow(query string, mapper RowMapper, args ...interface{}) (interface{}, error) {
+	row := c.db.QueryRow(query, args...)
+	result, err := mapper(row)
 	if err != nil {
 		return nil, err
 	}
