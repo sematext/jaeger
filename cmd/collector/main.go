@@ -49,8 +49,8 @@ import (
 	"github.com/uber/jaeger/pkg/recoveryhandler"
 	jc "github.com/uber/jaeger/thrift-gen/jaeger"
 	zc "github.com/uber/jaeger/thrift-gen/zipkincore"
-	sqlsFlags"github.com/uber/jaeger/identity/flags/sql"
-	memsFlags"github.com/uber/jaeger/identity/flags/memory"
+	dbAsFlags"github.com/uber/jaeger/security/flags/sql"
+	memAsFlags"github.com/uber/jaeger/security/flags/memory"
 )
 
 func main() {
@@ -62,8 +62,8 @@ func main() {
 	casOptions := casFlags.NewOptions("cassandra")
 	esOptions := esFlags.NewOptions("es")
 
-	memTokenStoreOptions := memsFlags.NewOptions("token-store.memory")
-	dbTokenStoreOptions := sqlsFlags.NewOptions("token-store.sql")
+	memAuthStoreOptions := memAsFlags.NewOptions("authentication-store.memory")
+	dbAuthStoreOptions := dbAsFlags.NewOptions("authentication-store.sql")
 
 	v := viper.New()
 	command := &cobra.Command{
@@ -75,8 +75,8 @@ func main() {
 			casOptions.InitFromViper(v)
 			esOptions.InitFromViper(v)
 
-			memTokenStoreOptions.InitFromViper(v)
-			dbTokenStoreOptions.InitFromViper(v)
+			memAuthStoreOptions.InitFromViper(v)
+			dbAuthStoreOptions.InitFromViper(v)
 
 			baseMetrics := xkit.Wrap(serviceName, expvar.NewFactory(10))
 
@@ -95,8 +95,8 @@ func main() {
 				basicB.Options.ElasticClientOption(esOptions.GetPrimary()),
 				basicB.Options.LoggerOption(logger),
 				basicB.Options.MetricsFactoryOption(baseMetrics),
-				basicB.Options.DbTokenStoreClientOption(dbTokenStoreOptions.GetPrimary()),
-				basicB.Options.InMemoryTokenStoreOption(memTokenStoreOptions.GetPrimary()),
+				basicB.Options.DbAuthenticationStoreClientOption(dbAuthStoreOptions.GetPrimary()),
+				basicB.Options.InMemoryAuthenticationStoreOption(memAuthStoreOptions.GetPrimary()),
 			)
 			if err != nil {
 				logger.Fatal("Unable to set up builder", zap.Error(err))
@@ -150,8 +150,8 @@ func main() {
 		builder.AddFlags,
 		casOptions.AddFlags,
 		esOptions.AddFlags,
-		dbTokenStoreOptions.AddFlags,
-		memTokenStoreOptions.AddFlags,
+		dbAuthStoreOptions.AddFlags,
+		memAuthStoreOptions.AddFlags,
 	)
 
 	if error := command.Execute(); error != nil {
