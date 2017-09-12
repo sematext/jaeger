@@ -22,68 +22,51 @@
 package sql
 
 import (
-	i"github.com/uber/jaeger/identity"
-	"github.com/uber/jaeger/pkg/cache"
+	sec"github.com/uber/jaeger/security"
 	"go.uber.org/zap"
-	"time"
+	"database/sql"
 )
 
-// DbTokenStore describes the store based on relational database engine
-type DbTokenStore struct {
+// DbAuthenticationStore describes the store based on relational database engine
+type DbAuthenticationStore struct {
 	client DbClient
 	logger *zap.Logger
-	cache  cache.Cache
 	query  string
 }
 
-// NewDbTokenStore creates a new instance of the SQL-based token store. It attempts to
+// NewDbAuthenticationStore creates a new instance of the SQL-based authentication store. It attempts to
 // ping the database server to ensure it's available.
-func NewDbTokenStore(
+func NewDbAuthenticationStore(
 	client DbClient,
 	logger *zap.Logger,
 	query string,
-	maxCacheSize int,
-	cacheEviction time.Duration,
-) (*DbTokenStore, error) {
+) (*DbAuthenticationStore, error) {
 	if err := client.Ping(); err != nil {
 		return nil, err
 	}
-	return &DbTokenStore{
+	return &DbAuthenticationStore{
 		client: client,
 		logger: logger,
-		cache: cache.NewLRUWithOptions(
-			maxCacheSize,
-			&cache.Options{
-				TTL: time.Second * cacheEviction,
-			},
-		),
 		query: query,
 	}, nil
 }
 
-// FindToken attempts to find a token in the cache. If not found, the specified SQL query
-// is executed against the underlying database engine. The token is cached to
-// avoid subsequent round trips to the database server, and thus reducing the
-// overall I/O activity.
-func (store *DbTokenStore) FindToken(token string, parameters ...i.TokenParameters) (bool, error) {
-	if store.cache.Get(token) != nil {
-		return true, nil
-	} else {
- 		if err := store.findToken(token, parameters...); err != nil {
-			return false, err
+// FindPrincipal attempts to find the principal associated with an authentication token. The result of the
+// SQL select sentence has to contain three fields describing the user name, the password and the status of the
+// account (active|locked).
+func (db *DbAuthenticationStore) FindPrincipal(token sec.AuthenticationToken) (*sec.AuthenticationContext, error) {
+	ctx, err := db.client.QueryForRow(db.query, func(row *sql.Row) (interface{}, error) {
+		var ctx sec.AuthenticationContext
+		err := row.Scan(&ctx.Principal, &ctx.Password, &ctx.Locked)
+		if err != nil {
+			return nil, err
 		}
-		store.cache.Put(token, token)
-		return true, nil
+		return ctx, nil
+	}, token.Username)
+	if err != nil {
+		return nil, err
 	}
-}
-
-func (store *DbTokenStore) findToken(token string, parameters ...i.TokenParameters) error {
-	args := make([]interface{}, len(parameters))
-	for j, param := range parameters {
-		args[j] = param
-	}
-	args = append([]interface{}{token}, args...)
-	_, err := store.client.QueryForRow(store.query, args...)
-	return err
+	c, _ := ctx.(sec.AuthenticationContext)
+	return &c, nil
 }
 

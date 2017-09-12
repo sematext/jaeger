@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/assert"
 	"github.com/pkg/errors"
+	"github.com/uber/jaeger/security"
 )
 
 type clientMock struct {
@@ -39,88 +40,93 @@ func (c clientMock) Ping() error {
 	return args.Error(0)
 }
 
-func (c clientMock) QueryForRow(query string, args ...interface{}) (interface{}, error) {
-	arguments := c.Called(query, args)
-	return arguments.String(0), arguments.Error(1)
+func (c clientMock) QueryForRow(query string, mapper RowMapper, args ...interface{}) (interface{}, error) {
+	arguments := c.Called(query, "func(*sql.Row) (interface{}, error)", args)
+	return arguments.Get(0), arguments.Error(1)
 }
 
-func TestNewDbTokenStore(t *testing.T) {
+func TestNewDbAuthenticationStore(t *testing.T) {
 	c := new(clientMock)
 
 	c.On("Ping").Return(nil)
 
 	logger := zap.NewNop()
-	store, err := NewDbTokenStore(
+	store, err := NewDbAuthenticationStore(
 		c,
 		logger,
-		"SELECT token FROM system WHERE token = ?",
-		100,
-		3600,
+		"SELECT token, token, active FROM system WHERE token = ?",
 	)
 	require.NoError(t, err)
 	assert.NotNil(t, store)
-	assert.Equal(t, 0, store.cache.Size())
 }
 
-func TestNewDbTokenStorePingError(t *testing.T) {
+func TestNewDbAuthenticationStorePingError(t *testing.T) {
 	c := new(clientMock)
 
 	c.On("Ping").Return(errors.New("Connection timeout"))
 
 	logger := zap.NewNop()
-	_, err := NewDbTokenStore(
+	_, err := NewDbAuthenticationStore(
 		c,
 		logger,
-		"SELECT token FROM system WHERE token = ?",
-		100,
-		3600,
+		"SELECT token, token, active FROM system WHERE token = ?",
 	)
 	require.Error(t, err)
 }
 
-func TestFindToken(t *testing.T) {
+func TestFindValidPrincipal(t *testing.T) {
 	c := new(clientMock)
 
+	ctx := security.AuthenticationContext{
+		Principal: "c15a1793-71b7-46a5-88c5-bc76f9c772a0",
+		Password: "c15a1793-71b7-46a5-88c5-bc76f9c772a0",
+		Locked: false,
+	}
 	c.On("Ping").Return(nil)
 	c.On("QueryForRow",
-		"SELECT token FROM system WHERE token = ?",
+		"SELECT token, token, active FROM system WHERE token = ?",
+		"func(*sql.Row) (interface{}, error)",
 		[]interface{}{"c15a1793-71b7-46a5-88c5-bc76f9c772a0"},
-	).Return("c15a1793-71b7-46a5-88c5-bc76f9c772a0", nil)
-
+	).Return(ctx, nil)
 	logger := zap.NewNop()
-	store, _ := NewDbTokenStore(
+	store, _ := NewDbAuthenticationStore(
 		c,
 		logger,
-		"SELECT token FROM system WHERE token = ?",
-		100,
-		3600,
+		"SELECT token, token, active FROM system WHERE token = ?",
 	)
-	assert.Nil(t, store.cache.Get("c15a1793-71b7-46a5-88c5-bc76f9c772a0"))
-	found, err := store.FindToken("c15a1793-71b7-46a5-88c5-bc76f9c772a0")
+	token := security.AuthenticationToken{
+		Username: "c15a1793-71b7-46a5-88c5-bc76f9c772a0",
+		Password: "c15a1793-71b7-46a5-88c5-bc76f9c772a0",
+	}
+	context, err := store.FindPrincipal(token)
 	require.NoError(t, err)
-	assert.True(t, found)
-	assert.NotNil(t, store.cache.Get("c15a1793-71b7-46a5-88c5-bc76f9c772a0"))
+	assert.NotNil(t, context)
+	assert.Equal(t, token.Username, ctx.Principal)
+	assert.Equal(t, token.Password, ctx.Password)
+	assert.False(t, context.Locked)
 }
 
-func TestFindTokenQueryError(t *testing.T) {
+func TestFindNonExistentPrincipal(t *testing.T) {
 	c := new(clientMock)
 
 	c.On("Ping").Return(nil)
 	c.On("QueryForRow",
-		"SELECT token FROM system WHERE token = ?",
+		"SELECT token, token, active FROM system WHERE token = ?",
+		"func(*sql.Row) (interface{}, error)",
 		[]interface{}{"c15a1793-71b7-46a5-88c5-bc76f9c772a0"},
-	).Return("c15a1793-71b7-46a5-88c5-bc76f9c772a0", errors.New("sql: no rows in result set"))
-
+	).Return(nil, errors.New("sql: no rows in result set"))
 	logger := zap.NewNop()
-	store, _ := NewDbTokenStore(
+	store, _ := NewDbAuthenticationStore(
 		c,
 		logger,
-		"SELECT token FROM system WHERE token = ?",
-		100,
-		3600,
+		"SELECT token, token, active FROM system WHERE token = ?",
 	)
-	assert.Nil(t, store.cache.Get("c15a1793-71b7-46a5-88c5-bc76f9c772a0"))
-	_, err := store.FindToken("c15a1793-71b7-46a5-88c5-bc76f9c772a0")
+	token := security.AuthenticationToken{
+		Username: "c15a1793-71b7-46a5-88c5-bc76f9c772a0",
+		Password: "c15a1793-71b7-46a5-88c5-bc76f9c772a0",
+	}
+	context, err := store.FindPrincipal(token)
 	require.Error(t, err)
-	assert.Nil(t, store.cache.Get("c15a1793-71b7-46a5-88c5-bc76f9c772a0"))
+	assert.Nil(t, context)
 }
+
