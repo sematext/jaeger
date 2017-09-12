@@ -50,7 +50,7 @@ type Configuration struct {
 	Username string
 	// Password to authenticate to an instance of the database
 	Password string
-	// Query specifies the SQL query that's used to obtain the token
+	// Query specifies the SQL query that's used to obtain the principal auth context
 	Query string
 }
 
