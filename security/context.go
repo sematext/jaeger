@@ -31,3 +31,7 @@ type AuthenticationContext struct {
 	Locked	  bool
 	Roles	  []Role
 }
+
+func (ctx AuthenticationContext) PasswordEquals(password string) bool {
+	return ctx.Password == password
+}
