@@ -22,14 +22,14 @@
 
 package config
 
-type InMemoryTokenStoreBuilder interface {
-	GetTokens() []string
+type InMemoryAuthenticationStoreBuilder interface {
+	GetPrincipals() []string
 }
 
 type Configuration struct {
-	Tokens []string
+	Principals []string
 }
 
-func (c *Configuration) GetTokens() []string {
-	return c.Tokens
+func (c *Configuration) GetPrincipals() []string {
+	return c.Principals
 }
