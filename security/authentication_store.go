@@ -19,11 +19,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package identity
+package security
 
-// TokenParameters is an aliased type for the extra authentication token parameters
-type TokenParameters interface{}
-
-type TokenStore interface {
-	FindToken(token string, parameters ...TokenParameters) (bool, error)
+type AuthenticationToken struct {
+	Username string
+	Password string
 }
+
+type AuthenticationStore interface {
+	FindPrincipal(token AuthenticationToken) (*AuthenticationContext, error)
+}
+
