@@ -32,11 +32,8 @@ import (
 	zs "github.com/uber/jaeger/cmd/collector/app/sanitizer/zipkin"
 	"github.com/uber/jaeger/cmd/flags"
 	"github.com/uber/jaeger/model"
-	i"github.com/uber/jaeger/identity"
-	sqlsc"github.com/uber/jaeger/identity/store/sql/config"
-	memsc"github.com/uber/jaeger/identity/store/memory/config"
-	dbTokenStore"github.com/uber/jaeger/identity/store/sql"
-	memTokenStore"github.com/uber/jaeger/identity/store/memory"
+	sec"github.com/uber/jaeger/security"
+	as"github.com/uber/jaeger/security/authenticationstore"
 	cascfg "github.com/uber/jaeger/pkg/cassandra/config"
 	escfg "github.com/uber/jaeger/pkg/es/config"
 	casSpanstore "github.com/uber/jaeger/plugin/storage/cassandra/spanstore"
@@ -56,7 +53,7 @@ type SpanHandlerBuilder struct {
 	metricsFactory    metrics.Factory
 	collectorOpts     *CollectorOptions
 	spanWriter        spanstore.Writer
-	spanAuthenticator i.Authenticator
+	spanAuth 		  sec.Authenticator
 }
 
 // NewSpanHandlerBuilder returns new SpanHandlerBuilder with configured span storage.
@@ -89,23 +86,16 @@ func NewSpanHandlerBuilder(cOpts *CollectorOptions, sFlags *flags.SharedFlags, o
 		return nil, flags.ErrUnsupportedStorageType
 	}
 
-	var tstore i.TokenStore
 	if cOpts.AuthSpan {
-		switch sFlags.TokenStore.Type {
-		case flags.InMemoryTokenStoreType:
-			tstore, err = spanHb.initInMemoryTokenStore(options.InMemoryTokenStoreBuilder)
-		case flags.SQLTokenStoreType:
-			tstore, err = spanHb.initDbTokenStore(options.DbTokenStoreClientBuilder)
-		default:
-			err = flags.ErrUnupportedTokenStoreType
-		}
-		if err == nil {
-			spanHb.spanAuthenticator = i.NewSpanAuthenticator(
-				tstore,
-				options.Logger,
-				cOpts.AuthTokenKey,
-			)
-		}
+		var authenticationStore sec.AuthenticationStore
+		authenticationStore, err = as.NewAuthenticationStore(sFlags.AuthenticationStore.Type, options.Logger, options)
+		spanHb.spanAuth = sec.NewAuthenticationManager(
+			authenticationStore,
+			options.Logger,
+			cOpts.SpanAuthTagKey,
+			cOpts.AuthenticationManagerCacheSize,
+			cOpts.AuthenticationManagerCacheTTL,
+		)
 	}
 
 	if err != nil {
@@ -144,24 +134,6 @@ func (spanHb *SpanHandlerBuilder) initElasticStore(esBuilder escfg.ClientBuilder
 	), nil
 }
 
-func (spanHb *SpanHandlerBuilder) initDbTokenStore(dbClientBuilder sqlsc.DbClientBuilder) (i.TokenStore, error) {
-	client, err := dbClientBuilder.NewDbClient()
-	if err != nil {
-		return nil, err
-	}
-	return dbTokenStore.NewDbTokenStore(
-		client,
-		spanHb.logger,
-		dbClientBuilder.GetQuery(),
-		dbClientBuilder.GetMaxCacheSize(),
-		dbClientBuilder.GetCacheEviction(),
-	)
-}
-
-func (spanHb *SpanHandlerBuilder) initInMemoryTokenStore(inMemoryTokenStoreBuilder memsc.InMemoryTokenStoreBuilder) (i.TokenStore, error) {
-	return memTokenStore.NewInMemoryTokenStore(inMemoryTokenStoreBuilder.GetTokens())
-}
-
 // BuildHandlers builds span handlers (Zipkin, Jaeger)
 func (spanHb *SpanHandlerBuilder) BuildHandlers() (app.ZipkinSpansHandler, app.JaegerBatchesHandler) {
 	hostname, _ := os.Hostname()
@@ -190,8 +162,11 @@ func (spanHb *SpanHandlerBuilder) BuildHandlers() (app.ZipkinSpansHandler, app.J
 
 func (spanHb *SpanHandlerBuilder) defaultSpanFilter(span *model.Span) bool {
 	if spanHb.collectorOpts.AuthSpan {
-		authenticator := spanHb.spanAuthenticator
-		return authenticator.Authenticate(span)
+		token := spanHb.spanAuth.TokenFromSpan(span)
+		if token != nil {
+			return spanHb.spanAuth.Authenticate(token)
+		}
+		return false
 	}
 	return true
 }
