@@ -38,7 +38,7 @@ type Client struct {
 }
 
 // NewClient builds a new SQL client. The driver for a specific database engine needs to be
-// registered for in order to manipulate and access the data.
+// registered in order to manipulate and access the data.
 func NewClient(
 	driver string,
 	datasource string,
