@@ -27,8 +27,8 @@ import (
 	cascfg "github.com/uber/jaeger/pkg/cassandra/config"
 	escfg "github.com/uber/jaeger/pkg/es/config"
 	"github.com/uber/jaeger/storage/spanstore/memory"
-	sqlscfg"github.com/uber/jaeger/identity/store/sql/config"
-	memscfg"github.com/uber/jaeger/identity/store/memory/config"
+	dbAsCfg"github.com/uber/jaeger/security/authenticationstore/sql/config"
+	memAsCfg"github.com/uber/jaeger/security/authenticationstore/memory/config"
 )
 
 // BasicOptions is a set of basic building blocks for most Jaeger executables
@@ -43,10 +43,10 @@ type BasicOptions struct {
 	CassandraSessionBuilder cascfg.SessionBuilder
 	// ElasticClientBuilder is the elasticsearch client builder
 	ElasticClientBuilder escfg.ClientBuilder
-	// DbClientBuilder is the SQL client builder for token store
-	DbTokenStoreClientBuilder sqlscfg.DbClientBuilder
-	// MemTokens is a builder for in-memory token store
-	InMemoryTokenStoreBuilder memscfg.InMemoryTokenStoreBuilder
+	// DbAuthenticationStoreClientBuilder is the SQL client builder for database authentication store
+	DbAuthenticationStoreClientBuilder dbAsCfg.DbClientBuilder
+	// InMemoryAuthenticationStoreBuilder is a builder for in-memory authentication store
+	InMemoryAuthenticationStoreBuilder memAsCfg.InMemoryAuthenticationStoreBuilder
 }
 
 // Option is a function that sets some option on StorageBuilder.
@@ -90,17 +90,17 @@ func (BasicOptions) MemoryStoreOption(memoryStore *memory.Store) Option {
 	}
 }
 
-// DbTokenStoreClientOption creates an Option that adds SQL client builder for token store
-func (BasicOptions) DbTokenStoreClientOption(clientBuilder sqlscfg.DbClientBuilder) Option {
+// DbAuthenticationStoreClientOption creates an Option that adds SQL client builder for authentication store
+func (BasicOptions) DbAuthenticationStoreClientOption(clientBuilder dbAsCfg.DbClientBuilder) Option {
 	return func(b *BasicOptions) {
-		b.DbTokenStoreClientBuilder = clientBuilder
+		b.DbAuthenticationStoreClientBuilder = clientBuilder
 	}
 }
 
-// MemTokensProviderOption creates an Option that adds an in-memory token provider auth tokens
-func (BasicOptions) InMemoryTokenStoreOption(builder memscfg.InMemoryTokenStoreBuilder) Option {
+// InMemoryAuthenticationStoreOption creates an Option that adds an in-memory principal provider
+func (BasicOptions) InMemoryAuthenticationStoreOption(builder memAsCfg.InMemoryAuthenticationStoreBuilder) Option {
 	return func(b *BasicOptions) {
-		b.InMemoryTokenStoreBuilder = builder
+		b.InMemoryAuthenticationStoreBuilder = builder
 	}
 }
 
