@@ -30,15 +30,17 @@ import (
 )
 
 const (
-	collectorQueueSize           = "collector.queue-size"
-	collectorNumWorkers          = "collector.num-workers"
-	collectorWriteCacheTTL       = "collector.write-cache-ttl"
-	collectorPort                = "collector.port"
-	collectorHTTPPort            = "collector.http-port"
-	collectorZipkinHTTPort       = "collector.zipkin.http-port"
-	collectorHealthCheckHTTPPort = "collector.health-check-http-port"
-	collectorAuthSpan 	 		 = "collector.auth-span"
-	collectorSpanAuthTokenKey	 = "collector.auth-token-key"
+	collectorQueueSize            = "collector.queue-size"
+	collectorNumWorkers           = "collector.num-workers"
+	collectorWriteCacheTTL        = "collector.write-cache-ttl"
+	collectorPort                 = "collector.port"
+	collectorHTTPPort             = "collector.http-port"
+	collectorZipkinHTTPort        = "collector.zipkin.http-port"
+	collectorHealthCheckHTTPPort  = "collector.health-check-http-port"
+	collectorAuthSpan 	 		  = "collector.auth-span"
+	collectorSpanAuthTagKey	 	  = "collector.span-auth-tag-key"
+	collectorAuthManagerCacheSize = "collector.auth-manager-cache-size"
+	collectorAuthManagerCacheTTL  = "collector.auth-manager-cache-ttl"
 )
 
 // CollectorOptions holds configuration for collector
@@ -57,10 +59,14 @@ type CollectorOptions struct {
 	CollectorZipkinHTTPPort int
 	// CollectorHealthCheckHTTPPort is the port that the health check service listens in on for http requests
 	CollectorHealthCheckHTTPPort int
-	// AuthSpan is the boolean that indicates if the incoming span's app token should be checked against token store
+	// AuthSpan is the boolean that indicates if the incoming span should be authenticated
 	AuthSpan bool
-	// AuthTokenKey defines the name of the tag's key associated with an authentication token
-	AuthTokenKey string
+	// SpanAuthTagKey defines the name of the tag's key associated with password / api token
+	SpanAuthTagKey string
+	// AuthenticationManagerCacheSize defines the size of the auth manager cache
+	AuthenticationManagerCacheSize int
+	// AuthenticationManagerCacheTTL defines the TTL of the auth manager cache items
+	AuthenticationManagerCacheTTL  time.Duration
 }
 
 // AddFlags adds flags for CollectorOptions
@@ -73,7 +79,9 @@ func AddFlags(flags *flag.FlagSet) {
 	flags.Int(collectorZipkinHTTPort, 0, "The http port for the Zipkin collector service e.g. 9411")
 	flags.Int(collectorHealthCheckHTTPPort, 14269, "The http port for the health check service")
 	flags.Bool(collectorAuthSpan, false, "Defines if incoming spans should be authenticated")
-	flags.String(collectorSpanAuthTokenKey, app.DefaultAuthTokenKey, "The name of the key that's used to find the authentication token from the tags")
+	flags.String(collectorSpanAuthTagKey, app.DefaultSpanAuthTagKey, "The name of the tag's key associated with password / api token")
+	flags.Int(collectorAuthManagerCacheSize, 1000, "The size of the authentication manager cache")
+	flags.Duration(collectorAuthManagerCacheTTL, time.Second * 3600, "The TTL of the auth manager cache items")
 }
 
 // InitFromViper initializes CollectorOptions with properties from viper
@@ -86,6 +94,8 @@ func (cOpts *CollectorOptions) InitFromViper(v *viper.Viper) *CollectorOptions {
 	cOpts.CollectorZipkinHTTPPort = v.GetInt(collectorZipkinHTTPort)
 	cOpts.CollectorHealthCheckHTTPPort = v.GetInt(collectorHealthCheckHTTPPort)
 	cOpts.AuthSpan = v.GetBool(collectorAuthSpan)
-	cOpts.AuthTokenKey = v.GetString(collectorSpanAuthTokenKey)
+	cOpts.SpanAuthTagKey = v.GetString(collectorSpanAuthTagKey)
+	cOpts.AuthenticationManagerCacheSize = v.GetInt(collectorAuthManagerCacheSize)
+	cOpts.AuthenticationManagerCacheTTL = v.GetDuration(collectorAuthManagerCacheTTL)
 	return cOpts
 }
