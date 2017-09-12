@@ -25,23 +25,24 @@ import (
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uber/jaeger/security"
 )
 
-func TestNewInMemoryTokenStoreEmptyTokens(t *testing.T) {
-	_, err := NewInMemoryTokenStore([]string{})
+func TestNewInMemoryAuthenticationStoreEmptyPrincipals(t *testing.T) {
+	_, err := NewInMemoryAuthenticationStore([]string{})
 	require.Error(t, err)
 }
 
-func TestFindToken(t *testing.T) {
-	store, _ := NewInMemoryTokenStore(
+func TestFindPrincipal(t *testing.T) {
+	store, _ := NewInMemoryAuthenticationStore(
 		[]string{
 			"38094e7a-96f8-11e7-bc87-9bae86d05b5b",
 			"45f4b11e-96f8-11e7-9e14-a7be8cf5fadf",
 			"4c788060-96f8-11e7-99db-5f748d21718d",
 		},
 	)
-	t1, _ := store.FindToken("38094e7a-96f8-11e7-bc87-9bae86d05b5b")
-	assert.True(t, t1)
-	t2, _ := store.FindToken("44f4b11e-96f8-11e7-9e14-a7be8cf5fadf")
-	assert.False(t, t2)
+	ctx1, _ := store.FindPrincipal(security.AuthenticationToken{Username: "38094e7a-96f8-11e7-bc87-9bae86d05b5b", Password: "38094e7a-96f8-11e7-bc87-9bae86d05b5b"})
+	assert.NotNil(t, ctx1)
+	ctx2, _ := store.FindPrincipal(security.AuthenticationToken{Username: "44f4b11e-96f8-11e7-9e14-a7be8cf5fadf", Password: "c15a1793-71b7-46a5-88c5-bc76f9c772a0"})
+	assert.Nil(t, ctx2)
 }

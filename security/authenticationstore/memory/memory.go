@@ -22,33 +22,37 @@
 package memory
 
 import (
-	i"github.com/uber/jaeger/identity"
+	sec"github.com/uber/jaeger/security"
 	"github.com/pkg/errors"
 )
 
-// InMemoryTokenStore is the in-memory implementation of the token store
-type InMemoryTokenStore struct {
-	tokens map[string]string
+// InMemoryAuthenticationStore is in-memory implementation of the authentication store
+type InMemoryAuthenticationStore struct {
+	ctxs map[string]*sec.AuthenticationContext
 }
 
-func NewInMemoryTokenStore(
-	tokens []string,
-) (*InMemoryTokenStore, error) {
-	if len(tokens) < 1 {
-		return nil, errors.New("No tokens provided for in-memory store")
+func NewInMemoryAuthenticationStore(
+	principals []string,
+) (*InMemoryAuthenticationStore, error) {
+	if len(principals) < 1 {
+		return nil, errors.New("No principals provided for in-memory store")
 	}
-	store := &InMemoryTokenStore{
-		tokens: make(map[string]string),
+	store := &InMemoryAuthenticationStore{
+		ctxs: make(map[string]*sec.AuthenticationContext),
 	}
-	for _, token := range tokens {
-		store.tokens[token] = token
+	for _, principal := range principals {
+		store.ctxs[principal] = &sec.AuthenticationContext{
+			Principal: principal,
+			Password: principal,
+			Locked: false,
+		}
 	}
 	return store, nil
 }
 
-func (store *InMemoryTokenStore) FindToken(token string, parameters ...i.TokenParameters) (bool, error) {
-	if _, ok := store.tokens[token]; ok {
-		return true, nil
+func (mem *InMemoryAuthenticationStore) FindPrincipal(token sec.AuthenticationToken) (*sec.AuthenticationContext, error) {
+	if ctx, ok := mem.ctxs[token.Username]; ok {
+		return ctx, nil
 	}
-	return false, nil
+	return nil, nil
 }
