@@ -23,8 +23,7 @@ package config
 
 import (
 	"fmt"
-	"github.com/uber/jaeger/identity/store/sql"
-	"time"
+	"github.com/uber/jaeger/security/authenticationstore/sql"
 )
 
 const (
@@ -35,8 +34,6 @@ const (
 type DbClientBuilder interface {
 	NewDbClient() (*sql.Client, error)
 	GetQuery() string
-	GetMaxCacheSize() int
-	GetCacheEviction() time.Duration
 }
 
 // Configuration describes the config properties needed to connect to a SQL database
@@ -55,10 +52,6 @@ type Configuration struct {
 	Password string
 	// Query specifies the SQL query that's used to obtain the token
 	Query string
-	// CacheSize limits the size of the cache where tokens are pushed
-	CacheSize int
-	// CacheEviction defines the time to live interval in seconds for the tokens in the cache
-	CacheEviction time.Duration
 }
 
 func (c *Configuration) NewDbClient() (*sql.Client, error) {
@@ -75,14 +68,6 @@ func (c *Configuration) NewDbClient() (*sql.Client, error) {
 
 func (c *Configuration) GetQuery() string {
 	return c.Query
-}
-
-func (c *Configuration) GetMaxCacheSize() int {
-	return c.CacheSize
-}
-
-func (c *Configuration) GetCacheEviction() time.Duration {
-	return c.CacheEviction
 }
 
 func (c *Configuration) buildDataSource() (string, error) {
