@@ -25,11 +25,11 @@ import (
 	"github.com/spf13/viper"
 	"flag"
 	"strings"
-	"github.com/uber/jaeger/identity/store/memory/config"
+	"github.com/uber/jaeger/security/authenticationstore/memory/config"
 )
 
 const (
-	suffixTokens    	= ".tokens"
+	suffixPrincipals = ".principals"
 )
 
 // Options describes various configuration for the in-memory token store
@@ -46,7 +46,7 @@ func NewOptions (namespace string) *Options {
 	return &Options {
 		primary: &namespaceConfig{
 			Configuration: config.Configuration{
-				Tokens: []string{},
+				Principals: []string{},
 			},
 			namespace: namespace,
 		},
@@ -64,9 +64,9 @@ func (opt *Options) AddFlags(flagSet *flag.FlagSet) {
 
 func addFlags(flagSet *flag.FlagSet, nsConfig *namespaceConfig) {
 	flagSet.String(
-		nsConfig.namespace + suffixTokens,
+		nsConfig.namespace + suffixPrincipals,
 		"",
-		"The comma-separated list of authentication tokens")
+		"The comma-separated list of authentication principals")
 }
 
 // InitFromViper initializes Options with properties from viper
@@ -75,8 +75,8 @@ func (opt *Options) InitFromViper(v *viper.Viper) {
 }
 
 func initFromViper(cfg *namespaceConfig, v *viper.Viper) {
-	tokens := v.GetString(cfg.namespace + suffixTokens)
-	if tokens != "" {
-		cfg.Tokens = strings.Split(tokens, ",")
+	principals := v.GetString(cfg.namespace + suffixPrincipals)
+	if principals != "" {
+		cfg.Principals = strings.Split(principals, ",")
 	}
 }
