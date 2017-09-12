@@ -22,10 +22,9 @@
 package sql
 
 import (
-	"github.com/uber/jaeger/identity/store/sql/config"
+	"github.com/uber/jaeger/security/authenticationstore/sql/config"
 	"github.com/spf13/viper"
 	"flag"
-	"time"
 )
 
 const (
@@ -36,11 +35,9 @@ const (
 	suffixPort		  	= ".port"
 	suffixDatabase	    = ".database"
 	suffixQuery 	  	= ".query"
-	suffixCacheSize   	= ".cache-size"
-	suffixCacheEviction = ".cache-eviction"
 )
 
-// Options describes various configuration for the SQL token store
+// Options describes various configuration for the SQL authentication store
 type Options struct {
 	primary *namespaceConfig
 }
@@ -60,9 +57,7 @@ func NewOptions (namespace string) *Options {
 				Username: "root",
 				Password: "",
 				Database: "",
-				Query: "SELECT token FROM System WHERE token = ?",
-				CacheSize: 1000,
-				CacheEviction: time.Second * 3600,
+				Query: "SELECT token, token, active FROM System WHERE token = ?",
 			},
 			namespace: namespace,
 		},
@@ -82,11 +77,11 @@ func addFlags(flagSet *flag.FlagSet, nsConfig *namespaceConfig) {
 	flagSet.String(
 		nsConfig.namespace + suffixUsername,
 		nsConfig.Username,
-		"The username required by SQL token store")
+		"The username required by SQL authentication store")
 	flagSet.String(
 		nsConfig.namespace + suffixPassword,
 		nsConfig.Password,
-		"The password required by SQL token store")
+		"The password required by SQL authentication store")
 	flagSet.String(
 		nsConfig.namespace + suffixDriver,
 		nsConfig.Driver,
@@ -102,19 +97,11 @@ func addFlags(flagSet *flag.FlagSet, nsConfig *namespaceConfig) {
 	flagSet.String(
 		nsConfig.namespace + suffixDatabase,
 		nsConfig.Database,
-		"The name of the database where token table resides")
+		"The name of the database where principal data can be find")
 	flagSet.String(
 		nsConfig.namespace + suffixQuery,
 		nsConfig.Query,
-		"The SQL query that's used to check for token in the database table")
-	flagSet.Int(
-		nsConfig.namespace + suffixCacheSize,
-		nsConfig.CacheSize,
-		"Limits the size of the cache where tokens are pushed after successful authentication")
-	flagSet.Duration(
-		nsConfig.namespace +  suffixCacheEviction,
-		nsConfig.CacheEviction,
-		"Defines the time to live interval in seconds for the tokens in the cache")
+		"The SQL query that retrieves principal info from the database")
 }
 
 // InitFromViper initializes Options with properties from viper
@@ -130,6 +117,4 @@ func initFromViper(cfg *namespaceConfig, v *viper.Viper) {
 	cfg.Port = uint(v.GetInt(cfg.namespace + suffixPort))
 	cfg.Database = v.GetString(cfg.namespace + suffixDatabase)
 	cfg.Query = v.GetString(cfg.namespace + suffixQuery)
-	cfg.CacheSize = v.GetInt(cfg.namespace + suffixCacheSize)
-	cfg.CacheEviction = v.GetDuration(cfg.namespace + suffixCacheEviction)
 }
