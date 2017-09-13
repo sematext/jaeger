@@ -28,6 +28,7 @@ import (
 	"github.com/uber/jaeger/model"
 	"github.com/stretchr/testify/assert"
 	"time"
+	"github.com/pkg/errors"
 )
 
 type authenticationStoreMock struct {
@@ -67,4 +68,94 @@ func TestAuthenticate(t *testing.T) {
 
 	success := authenticationManager.Authenticate(token)
 	assert.True(t, success)
+	assert.Equal(t, authenticationManager.cache.Size(), 1)
+
+	authenticationManager.Authenticate(token)
+	store.AssertNumberOfCalls(t, "FindPrincipal", 1)
 }
+
+func TestAuthenticateIncorrectPassword(t *testing.T) {
+
+	store := new(authenticationStoreMock)
+	logger := zap.NewNop()
+
+	ctx := AuthenticationContext{
+		Principal: "315a1793-a1b7-16a5-88c5-bc76f9c772a1",
+		Password: "315a1793-a1b7-16a5-88c5-bc76f9c772a1",
+		Locked: false,
+	}
+	authenticationManager := NewAuthenticationManager(
+		store,
+		logger,
+		"api-token",
+		100,
+		time.Second * 60,
+	)
+	span := &model.Span {
+		Tags: model.KeyValues{
+			model.String("api-token", "315a2793-a1b7-16a5-88c5-bc76f9c772a1"),
+		},
+	}
+	token := authenticationManager.TokenFromSpan(span)
+	store.On("FindPrincipal", *token).Return(ctx, nil)
+
+	success := authenticationManager.Authenticate(token)
+	assert.False(t, success)
+	assert.Equal(t, authenticationManager.cache.Size(), 0)
+}
+
+func TestAuthenticatePrincipalLocked(t *testing.T) {
+
+	store := new(authenticationStoreMock)
+	logger := zap.NewNop()
+
+	ctx := AuthenticationContext{
+		Principal: "315a1793-a1b7-16a5-88c5-bc76f9c772a1",
+		Password: "315a1793-a1b7-16a5-88c5-bc76f9c772a1",
+		Locked: true,
+	}
+	authenticationManager := NewAuthenticationManager(
+		store,
+		logger,
+		"api-token",
+		100,
+		time.Second * 60,
+	)
+	span := &model.Span {
+		Tags: model.KeyValues{
+			model.String("api-token", "315a1793-a1b7-16a5-88c5-bc76f9c772a1"),
+		},
+	}
+	token := authenticationManager.TokenFromSpan(span)
+	store.On("FindPrincipal", *token).Return(ctx, nil)
+
+	success := authenticationManager.Authenticate(token)
+	assert.False(t, success)
+	assert.Equal(t, authenticationManager.cache.Size(), 0)
+}
+
+func TestAuthenticatePrincipalNotFound(t *testing.T) {
+
+	store := new(authenticationStoreMock)
+	logger := zap.NewNop()
+
+	authenticationManager := NewAuthenticationManager(
+		store,
+		logger,
+		"api-token",
+		100,
+		time.Second * 60,
+	)
+	span := &model.Span {
+		Tags: model.KeyValues{
+			model.String("api-token", "315a1793-a1b7-16a5-88c5-bc76f9c772a1"),
+		},
+	}
+	token := authenticationManager.TokenFromSpan(span)
+	store.On("FindPrincipal", *token).Return(nil, errors.New("sql: no rows in result set"))
+
+	success := authenticationManager.Authenticate(token)
+	assert.False(t, success)
+	assert.Equal(t, authenticationManager.cache.Size(), 0)
+}
+
