@@ -28,11 +28,6 @@ import (
 	"time"
 )
 
-const (
-	kvKey 	= "key"
-	kvValue = "value"
-)
-
 // Authenticator authenticates inbound spans
 type Authenticator interface {
 	Authenticate(token *AuthenticationToken) bool
