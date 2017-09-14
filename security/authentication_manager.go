@@ -28,6 +28,10 @@ import (
 	"time"
 )
 
+const (
+	kvKey 	= "key"
+	kvValue = "value"
+)
 
 // Authenticator authenticates inbound spans
 type Authenticator interface {
@@ -61,10 +65,16 @@ func NewAuthenticationManager(
 	}
 }
 
-// TokenFromSpan builds an authentication token from span tags. The same tag value
-// is used for both user name and password fields.
+// TokenFromSpan builds an authentication token from span / process tags.
+// The same tag value is used for both user name and password fields.
 func (am AuthenticationManager) TokenFromSpan(span *model.Span) *AuthenticationToken {
 	if kv, ok := span.Tags.FindByKey(am.key); ok {
+		return &AuthenticationToken{
+			Username: kv.VStr,
+			Password: kv.VStr,
+		}
+	}
+	if kv, ok := span.Process.Tags.FindByKey(am.key); ok {
 		return &AuthenticationToken{
 			Username: kv.VStr,
 			Password: kv.VStr,
@@ -82,7 +92,7 @@ func (am AuthenticationManager) Authenticate(token *AuthenticationToken) bool {
 		var err error
 		ctx, err = am.store.FindPrincipal(*token)
 		if err != nil {
-			am.logger.Warn("Unable to retrieve principal", zap.Error(err))
+			am.logger.Warn("Failed to load principal", zap.Error(err))
 			return false
 		}
 		if ctx.PasswordEquals(token.Password) && !ctx.Locked {

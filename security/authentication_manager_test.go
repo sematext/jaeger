@@ -104,6 +104,39 @@ func TestAuthenticateIncorrectPassword(t *testing.T) {
 	assert.Equal(t, authenticationManager.cache.Size(), 0)
 }
 
+func TestAuthenticateTokenInProcess(t *testing.T) {
+
+	store := new(authenticationStoreMock)
+	logger := zap.NewNop()
+
+	ctx := AuthenticationContext{
+		Principal: "315a1793-a1b7-16a5-88c5-bc76f9c772a1",
+		Password: "315a1793-a1b7-16a5-88c5-bc76f9c772a1",
+		Locked: false,
+	}
+	authenticationManager := NewAuthenticationManager(
+		store,
+		logger,
+		"api-token",
+		100,
+		time.Second * 60,
+	)
+	span := &model.Span {
+		Process: &model.Process{
+			Tags: model.KeyValues{
+				model.String("api-token", "315a2793-a1b7-16a5-88c5-bc76f9c772a1"),
+			},
+		},
+	}
+	token := authenticationManager.TokenFromSpan(span)
+	store.On("FindPrincipal", *token).Return(ctx, nil)
+
+	success := authenticationManager.Authenticate(token)
+	assert.False(t, success)
+	assert.Equal(t, authenticationManager.cache.Size(), 0)
+}
+
+
 func TestAuthenticatePrincipalLocked(t *testing.T) {
 
 	store := new(authenticationStoreMock)
