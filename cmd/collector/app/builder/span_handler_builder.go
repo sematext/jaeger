@@ -165,8 +165,10 @@ func (spanHb *SpanHandlerBuilder) defaultSpanFilter(span *model.Span) bool {
 		token := spanHb.spanAuth.TokenFromSpan(span)
 		if token != nil {
 			return spanHb.spanAuth.Authenticate(token)
+		} else {
+			spanHb.logger.Warn("Couldn't extract auth token from span")
+			return false
 		}
-		return false
 	}
 	return true
 }
