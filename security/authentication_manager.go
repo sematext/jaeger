@@ -63,19 +63,7 @@ func NewAuthenticationManager(
 // TokenFromSpan builds an authentication token from span / process tags.
 // The same tag value is used for both user name and password fields.
 func (am AuthenticationManager) TokenFromSpan(span *model.Span) *AuthenticationToken {
-	if kv, ok := span.Tags.FindByKey(am.key); ok {
-		return &AuthenticationToken{
-			Username: kv.VStr,
-			Password: kv.VStr,
-		}
-	}
-	if kv, ok := span.Process.Tags.FindByKey(am.key); ok {
-		return &AuthenticationToken{
-			Username: kv.VStr,
-			Password: kv.VStr,
-		}
-	}
-	return nil
+	return am.findByKey(span.Tags, span.Process.Tags)
 }
 
 // Authenticate authenticates the inbound span. It collaborates with underlying authentication store
@@ -109,4 +97,16 @@ func (am *AuthenticationManager) ctxFromCache(username string) *AuthenticationCo
 
 func (am *AuthenticationManager) ctxToCache(username string, ctx *AuthenticationContext) {
 	am.cache.Put(username, ctx)
+}
+
+func (am *AuthenticationManager) findByKey(kvss ...model.KeyValues) *AuthenticationToken {
+	for _, kvs := range kvss {
+		if kv, ok := kvs.FindByKey(am.key); ok {
+			return &AuthenticationToken{
+				Username: kv.VStr,
+				Password: kv.VStr,
+			}
+		}
+	}
+	return nil
 }

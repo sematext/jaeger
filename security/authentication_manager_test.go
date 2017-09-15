@@ -62,6 +62,11 @@ func TestAuthenticate(t *testing.T) {
 		Tags: model.KeyValues{
 			model.String("api-token", "315a1793-a1b7-16a5-88c5-bc76f9c772a1"),
 		},
+		Process: &model.Process{
+			Tags: model.KeyValues{
+				model.String("foo", "bar"),
+			},
+		},
 	}
 	token := authenticationManager.TokenFromSpan(span)
 	store.On("FindPrincipal", *token).Return(ctx, nil)
@@ -95,6 +100,11 @@ func TestAuthenticateIncorrectPassword(t *testing.T) {
 		Tags: model.KeyValues{
 			model.String("api-token", "315a2793-a1b7-16a5-88c5-bc76f9c772a1"),
 		},
+		Process: &model.Process{
+			Tags: model.KeyValues{
+				model.String("foo", "bar"),
+			},
+		},
 	}
 	token := authenticationManager.TokenFromSpan(span)
 	store.On("FindPrincipal", *token).Return(ctx, nil)
@@ -122,6 +132,9 @@ func TestAuthenticateTokenInProcess(t *testing.T) {
 		time.Second * 60,
 	)
 	span := &model.Span {
+		Tags: model.KeyValues{
+			model.String("foo", "bar"),
+		},
 		Process: &model.Process{
 			Tags: model.KeyValues{
 				model.String("api-token", "315a2793-a1b7-16a5-88c5-bc76f9c772a1"),
@@ -158,6 +171,11 @@ func TestAuthenticatePrincipalLocked(t *testing.T) {
 		Tags: model.KeyValues{
 			model.String("api-token", "315a1793-a1b7-16a5-88c5-bc76f9c772a1"),
 		},
+		Process: &model.Process{
+			Tags: model.KeyValues{
+				model.String("foo", "bar"),
+			},
+		},
 	}
 	token := authenticationManager.TokenFromSpan(span)
 	store.On("FindPrincipal", *token).Return(ctx, nil)
@@ -182,6 +200,11 @@ func TestAuthenticatePrincipalNotFound(t *testing.T) {
 	span := &model.Span {
 		Tags: model.KeyValues{
 			model.String("api-token", "315a1793-a1b7-16a5-88c5-bc76f9c772a1"),
+		},
+		Process: &model.Process{
+			Tags: model.KeyValues{
+				model.String("foo", "bar"),
+			},
 		},
 	}
 	token := authenticationManager.TokenFromSpan(span)
