@@ -42,7 +42,7 @@ type Client struct {
 func NewClient(
 	driver string,
 	datasource string,
-) (*Client, error) {
+) (DbClient, error) {
 	db, err := sql.Open(driver, datasource)
 	if err != nil {
 		return nil, err

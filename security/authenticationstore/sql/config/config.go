@@ -32,7 +32,7 @@ const (
 
 // DbClientBuilder creates a new SQL client
 type DbClientBuilder interface {
-	NewDbClient() (*sql.Client, error)
+	NewDbClient() (sql.DbClient, error)
 	GetQuery() string
 }
 
@@ -54,7 +54,7 @@ type Configuration struct {
 	Query string
 }
 
-func (c *Configuration) NewDbClient() (*sql.Client, error) {
+func (c *Configuration) NewDbClient() (sql.DbClient, error) {
 	datasource, err := c.buildDataSource()
 	if err != nil {
 		return nil, err
